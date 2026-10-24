@@ -1,0 +1,1505 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NEXUS // Distributed Task Orchestration Engine</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            surface: {
+              DEFAULT: '#0B0E14',
+              secondary: '#111622',
+              card: '#161D2C',
+              hover: '#1D263B',
+              border: '#232E47',
+              borderLight: '#2F3C5B',
+            },
+            accent: {
+              cyan: '#00F0FF',
+              emerald: '#00E599',
+              amber: '#FFB800',
+              rose: '#FF3366',
+              violet: '#8B5CF6'
+            }
+          },
+          fontFamily: {
+            mono: ['"JetBrains Mono"', 'monospace'],
+            sans: ['"Inter"', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; background-color: #07090E; color: #E2E8F0; }
+    code, pre, .font-mono { font-family: 'JetBrains Mono', monospace; }
+    
+    /* Technical Grid Overlay */
+    .bg-grid-pattern {
+      background-size: 32px 32px;
+      background-image: 
+        linear-gradient(to right, rgba(35, 46, 71, 0.25) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(35, 46, 71, 0.25) 1px, transparent 1px);
+    }
+
+    /* Custom Technical Scrollbar */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: #07090E; }
+    ::-webkit-scrollbar-thumb { background: #232E47; border-radius: 2px; }
+    ::-webkit-scrollbar-thumb:hover { background: #2F3C5B; }
+
+    /* Pulse Glow */
+    .glow-cyan { box-shadow: 0 0 15px rgba(0, 240, 255, 0.25); }
+    .glow-emerald { box-shadow: 0 0 15px rgba(0, 229, 153, 0.25); }
+    .glow-rose { box-shadow: 0 0 15px rgba(255, 51, 102, 0.25); }
+  </style>
+</head>
+<body class="min-h-screen bg-[#07090E] text-slate-200 antialiased selection:bg-cyan-500/30 selection:text-cyan-300">
+
+  <!-- TOP ENTERPRISE NAVIGATION HEADER -->
+  <header class="sticky top-0 z-40 bg-[#0B0E14]/95 backdrop-blur-md border-b border-[#1F2739] px-5 py-2.5">
+    <div class="max-w-[1720px] mx-auto flex items-center justify-between flex-wrap gap-3">
+      
+      <!-- Brand & Cluster Metadata -->
+      <div class="flex items-center gap-4">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500/20 to-blue-600/30 border border-cyan-500/40 flex items-center justify-center text-cyan-400 font-mono font-bold text-sm shadow-inner">
+            <span>//Q</span>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="font-extrabold text-white text-sm tracking-wider uppercase">NEXUS QUEUE</span>
+              <span class="text-[10px] font-mono px-1.5 py-0.2 bg-[#161D2C] border border-[#232E47] text-slate-400 rounded">v2.4-PROD</span>
+            </div>
+            <div class="flex items-center gap-2 text-[11px] font-mono text-slate-400">
+              <span>CLUSTER: <strong class="text-slate-200 font-semibold">us-east-prod-1</strong></span>
+              <span class="text-slate-600">|</span>
+              <span class="flex items-center gap-1.5">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span class="text-emerald-400 font-medium">DISPATCHER HEALTHY</span>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Center Live Links & Tools -->
+      <div class="hidden xl:flex items-center gap-4 text-xs font-mono bg-[#111622] px-4 py-1.5 rounded-full border border-[#1F2739]">
+        <button onclick="openWorkersModal()" class="flex items-center gap-1.5 text-slate-300 hover:text-white transition-colors">
+          <i data-lucide="server" class="w-3.5 h-3.5 text-emerald-400"></i>
+          <span>WORKERS: <strong id="header-worker-count" class="text-emerald-400">1 ONLINE</strong></span>
+        </button>
+        <span class="text-slate-600">|</span>
+        <a href="http://127.0.0.1:5000" target="_blank" class="flex items-center gap-1.5 text-slate-300 hover:text-white transition-colors" title="Open Live Store Integration Demo">
+          <i data-lucide="shopping-cart" class="w-3.5 h-3.5 text-cyan-400"></i>
+          <span>STOREFRONT (PORT 5000) ↗</span>
+        </a>
+        <span class="text-slate-600">|</span>
+        <a href="/metrics" target="_blank" class="flex items-center gap-1.5 text-slate-300 hover:text-white transition-colors">
+          <i data-lucide="activity" class="w-3.5 h-3.5 text-amber-400"></i>
+          <span>PROMETHEUS ↗</span>
+        </a>
+        <span class="text-slate-600">|</span>
+        <a href="/docs" target="_blank" class="flex items-center gap-1.5 text-slate-300 hover:text-white transition-colors">
+          <i data-lucide="book-open" class="w-3.5 h-3.5 text-purple-400"></i>
+          <span>SWAGGER DOCS ↗</span>
+        </a>
+      </div>
+
+      <!-- Right Action Controls -->
+      <div class="flex items-center gap-2">
+        <!-- Live Traffic Autopilot Switch -->
+        <button id="btn-autopilot" onclick="toggleAutopilot()" class="px-3 py-1.5 rounded-lg bg-[#111622] hover:bg-[#1A2234] text-slate-300 border border-[#232E47] text-xs font-mono font-semibold flex items-center gap-2 transition-all" title="Simulates continuous real-world customer traffic autonomously">
+          <span id="dot-autopilot" class="w-2 h-2 rounded-full bg-slate-500"></span>
+          <span id="text-autopilot">AUTOPILOT: OFF</span>
+        </button>
+
+        <button onclick="openCustomTaskModal()" class="px-3 py-1.5 rounded-lg bg-[#161D2C] hover:bg-[#1D263B] text-slate-300 hover:text-white border border-[#232E47] text-xs font-mono font-medium flex items-center gap-1.5 transition-all" title="Build & inject a custom task payload">
+          <i data-lucide="plus-circle" class="w-3.5 h-3.5 text-cyan-400"></i>
+          <span>Custom Task</span>
+        </button>
+
+        <button onclick="openWorkersModal()" class="px-3 py-1.5 rounded-lg bg-[#161D2C] hover:bg-[#1D263B] text-slate-300 hover:text-white border border-[#232E47] text-xs font-mono font-medium flex items-center gap-1.5 transition-all" title="View worker cluster nodes">
+          <i data-lucide="cpu" class="w-3.5 h-3.5 text-emerald-400"></i>
+          <span>Cluster Nodes</span>
+        </button>
+
+        <button onclick="openConnectModal()" class="px-3 py-1.5 rounded-lg bg-[#161D2C] hover:bg-[#1D263B] text-slate-300 hover:text-white border border-[#232E47] text-xs font-mono font-medium flex items-center gap-1.5 transition-all" title="Integrate your real website or microservice">
+          <i data-lucide="code-2" class="w-3.5 h-3.5 text-amber-400"></i>
+          <span>SDKs</span>
+        </button>
+
+        <button onclick="openBlueprintModal()" class="px-3 py-1.5 rounded-lg bg-[#161D2C] hover:bg-[#1D263B] text-slate-300 hover:text-white border border-[#232E47] text-xs font-medium flex items-center gap-1.5 transition-all">
+          <i data-lucide="network" class="w-3.5 h-3.5 text-cyan-400"></i>
+          <span>Architecture</span>
+        </button>
+
+        <button onclick="triggerBurstLoad()" class="px-3 py-1.5 rounded-lg bg-cyan-950/60 hover:bg-cyan-900/60 text-cyan-300 border border-cyan-500/40 text-xs font-mono font-semibold flex items-center gap-1.5 transition-all">
+          <i data-lucide="zap" class="w-3.5 h-3.5 text-cyan-400"></i>
+          <span>BURST (+10)</span>
+        </button>
+
+        <button onclick="fetchClusterState()" class="p-2 rounded-lg bg-[#161D2C] hover:bg-[#1D263B] text-slate-300 hover:text-white border border-[#232E47] text-xs transition-colors" title="Force Sync State">
+          <i data-lucide="refresh-cw" class="w-3.5 h-3.5" id="sync-icon"></i>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- MAIN DASHBOARD CONTENT -->
+  <main class="max-w-[1720px] mx-auto p-5 space-y-6">
+
+    <!-- REAL-WORLD CUSTOMER TRAFFIC AUTOPILOT BANNER -->
+    <div id="autopilot-banner" class="hidden p-4 rounded-xl bg-gradient-to-r from-emerald-950/40 via-[#0E131E] to-[#0E131E] border border-emerald-500/40 flex items-center justify-between flex-wrap gap-3">
+      <div class="flex items-center gap-3">
+        <span class="relative flex h-3 w-3">
+          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+          <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+        </span>
+        <div>
+          <div class="text-xs font-mono font-bold text-white flex items-center gap-2">
+            <span>LIVE CUSTOMER TRAFFIC AUTOPILOT: ACTIVE</span>
+            <span class="text-[10px] px-2 py-0.2 rounded bg-emerald-500/20 text-emerald-300 font-mono border border-emerald-500/30">STREAMING PRODUCTION TRAFFIC</span>
+          </div>
+          <p id="autopilot-event-log" class="text-[11px] text-emerald-300/80 font-mono mt-0.5">
+            Streaming real incoming user checkouts, receipts, and background tasks every 2.5 seconds...
+          </p>
+        </div>
+      </div>
+      <button onclick="toggleAutopilot()" class="px-3 py-1.5 rounded-lg bg-rose-950/60 hover:bg-rose-900/60 border border-rose-500/40 text-rose-300 text-xs font-mono font-semibold transition-all">
+        Pause Traffic
+      </button>
+    </div>
+
+    <!-- TELEMETRY & SYSTEM HEALTH HUD -->
+    <section class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3.5">
+      <!-- Active Worker Nodes -->
+      <div onclick="openWorkersModal()" class="p-4 rounded-xl bg-[#0E131E] border border-[#1F2739] hover:border-emerald-500/50 cursor-pointer transition-all flex flex-col justify-between">
+        <div class="flex items-center justify-between text-xs font-mono text-slate-400">
+          <span>WORKER CLUSTER</span>
+          <i data-lucide="server" class="w-4 h-4 text-emerald-400"></i>
+        </div>
+        <div class="my-2 flex items-baseline gap-2">
+          <span id="metric-workers" class="text-3xl font-extrabold text-white font-mono tracking-tight">1</span>
+          <span id="metric-workers-status" class="text-[11px] font-mono text-emerald-400 font-semibold">ONLINE</span>
+        </div>
+        <div class="text-[11px] text-slate-500 font-mono flex items-center justify-between">
+          <span>Concurrency Capacity</span>
+          <span class="text-cyan-400">Inspect Nodes →</span>
+        </div>
+      </div>
+
+      <!-- Priority Queue Backlog -->
+      <div class="p-4 rounded-xl bg-[#0E131E] border border-[#1F2739] flex flex-col justify-between">
+        <div class="flex items-center justify-between text-xs font-mono text-slate-400">
+          <span>ACTIVE BACKLOG</span>
+          <i data-lucide="clock" class="w-4 h-4 text-amber-400"></i>
+        </div>
+        <div class="my-2 flex items-baseline gap-2">
+          <span id="metric-queued" class="text-3xl font-extrabold text-white font-mono tracking-tight">0</span>
+          <span class="text-[11px] font-mono text-amber-400 font-semibold">PENDING</span>
+        </div>
+        <div class="text-[11px] text-slate-500 font-mono flex items-center justify-between">
+          <span class="text-red-400 font-semibold">P0:<b id="pill-p0">0</b></span>
+          <span class="text-amber-400 font-semibold">P1:<b id="pill-p1">0</b></span>
+          <span class="text-blue-400 font-semibold">P2:<b id="pill-p2">0</b></span>
+        </div>
+      </div>
+
+      <!-- Lifetime Committed -->
+      <div class="p-4 rounded-xl bg-[#0E131E] border border-[#1F2739] flex flex-col justify-between">
+        <div class="flex items-center justify-between text-xs font-mono text-slate-400">
+          <span>COMMITTED TASKS</span>
+          <i data-lucide="check-check" class="w-4 h-4 text-cyan-400"></i>
+        </div>
+        <div class="my-2 flex items-baseline gap-2">
+          <span id="metric-completed" class="text-3xl font-extrabold text-white font-mono tracking-tight">0</span>
+          <span class="text-[11px] font-mono text-cyan-400 font-semibold">COMPLETED</span>
+        </div>
+        <div class="text-[11px] text-slate-500 font-mono flex items-center justify-between">
+          <span>Avg Exec Duration</span>
+          <span class="text-slate-300 font-mono" id="metric-latency">~420ms</span>
+        </div>
+      </div>
+
+      <!-- Dead Letter Quarantine -->
+      <div class="p-4 rounded-xl bg-[#0E131E] border border-[#1F2739] flex flex-col justify-between">
+        <div class="flex items-center justify-between text-xs font-mono text-slate-400">
+          <span>DEAD-LETTER (DLQ)</span>
+          <i data-lucide="shield-alert" class="w-4 h-4 text-rose-400"></i>
+        </div>
+        <div class="my-2 flex items-baseline gap-2">
+          <span id="metric-dlq" class="text-3xl font-extrabold text-white font-mono tracking-tight">0</span>
+          <span class="text-[11px] font-mono text-rose-400 font-semibold">ISOLATED</span>
+        </div>
+        <div class="text-[11px] text-slate-500 font-mono flex items-center justify-between">
+          <span>Quarantine Policy</span>
+          <button onclick="purgeDLQ()" class="text-rose-400 hover:underline font-bold">Purge All</button>
+        </div>
+      </div>
+
+      <!-- Sparkline Activity Canvas -->
+      <div class="p-4 rounded-xl bg-[#0E131E] border border-[#1F2739] flex flex-col justify-between col-span-2 md:col-span-4 lg:col-span-1">
+        <div class="flex items-center justify-between text-xs font-mono text-slate-400">
+          <span>THROUGHPUT REALTIME</span>
+          <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+        </div>
+        <div class="my-1">
+          <canvas id="sparklineCanvas" width="220" height="42" class="w-full h-10"></canvas>
+        </div>
+        <div class="text-[10px] text-slate-500 font-mono flex items-center justify-between">
+          <span>Window: 60s</span>
+          <span class="text-cyan-400 font-bold" id="metric-ops">~14.2 ops/s</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- WORKBENCH: DISPATCH CONTROLS & TASK INGESTION -->
+    <section class="p-5 rounded-2xl bg-[#0B0E14] border border-[#1F2739] space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#1A2234]">
+        <div>
+          <div class="flex items-center gap-2">
+            <h2 class="text-sm font-extrabold text-white tracking-wide uppercase font-mono">Task Dispatcher Workbench</h2>
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-[#161D2C] text-slate-400 border border-[#232E47]">QUICK INGESTION PRESETS</span>
+          </div>
+          <p class="text-xs text-slate-400 mt-0.5">Click any payload template below to test worker dequeue, concurrency, leases, and retry logic.</p>
+        </div>
+        <div id="toast-status" class="hidden text-xs font-mono px-3 py-1.5 rounded-lg bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
+          <span id="toast-text">Dispatching...</span>
+        </div>
+      </div>
+
+      <!-- Action Presets Grid -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+
+        <!-- 1. Email -->
+        <div class="p-3.5 rounded-xl bg-[#0F1420] border border-[#1F2739] hover:border-red-500/50 transition-all flex flex-col justify-between group">
+          <div>
+            <div class="flex items-center justify-between text-[10px] font-mono font-bold mb-1.5">
+              <span class="text-red-400 bg-red-500/10 px-1.5 py-0.2 rounded border border-red-500/20">P0 CRITICAL</span>
+              <span class="text-slate-500">~500ms</span>
+            </div>
+            <div class="font-bold text-white text-xs font-mono">TASK_DISPATCH_EMAIL</div>
+            <p class="text-[11px] text-slate-400 mt-1">SMTP handshake, template compilation, TLS signing.</p>
+          </div>
+          <button onclick="dispatchJob('email_dispatch', 'high', {to: 'enterprise@corp.internal', subject: 'Q4 Financial Closeout', simulate_fail: false})" class="mt-3 w-full py-1.5 px-3 rounded-lg bg-[#161D2C] hover:bg-red-600 hover:text-white text-slate-300 border border-[#232E47] hover:border-red-500 font-mono text-xs font-semibold flex items-center justify-center gap-1.5 transition-all">
+            <i data-lucide="send" class="w-3.5 h-3.5"></i>
+            <span>Inject P0 Task</span>
+          </button>
+        </div>
+
+        <!-- 2. Computation -->
+        <div class="p-3.5 rounded-xl bg-[#0F1420] border border-[#1F2739] hover:border-amber-500/50 transition-all flex flex-col justify-between group">
+          <div>
+            <div class="flex items-center justify-between text-[10px] font-mono font-bold mb-1.5">
+              <span class="text-amber-400 bg-amber-500/10 px-1.5 py-0.2 rounded border border-amber-500/20">P1 STANDARD</span>
+              <span class="text-slate-500">~300ms</span>
+            </div>
+            <div class="font-bold text-white text-xs font-mono">TASK_COMPUTE_PRIME</div>
+            <p class="text-[11px] text-slate-400 mt-1">CPU intensive Fibonacci & prime matrix factoring.</p>
+          </div>
+          <button onclick="dispatchJob('custom_calc', 'medium', {n: 24, simulate_fail: false})" class="mt-3 w-full py-1.5 px-3 rounded-lg bg-[#161D2C] hover:bg-amber-600 hover:text-white text-slate-300 border border-[#232E47] hover:border-amber-500 font-mono text-xs font-semibold flex items-center justify-center gap-1.5 transition-all">
+            <i data-lucide="cpu" class="w-3.5 h-3.5"></i>
+            <span>Inject P1 Task</span>
+          </button>
+        </div>
+
+        <!-- 3. Data Export -->
+        <div class="p-3.5 rounded-xl bg-[#0F1420] border border-[#1F2739] hover:border-blue-500/50 transition-all flex flex-col justify-between group">
+          <div>
+            <div class="flex items-center justify-between text-[10px] font-mono font-bold mb-1.5">
+              <span class="text-blue-400 bg-blue-500/10 px-1.5 py-0.2 rounded border border-blue-500/20">P2 BULK</span>
+              <span class="text-slate-500">~800ms</span>
+            </div>
+            <div class="font-bold text-white text-xs font-mono">TASK_ETL_EXPORT</div>
+            <p class="text-[11px] text-slate-400 mt-1">Warehouse extract, column compression, CSV gzip.</p>
+          </div>
+          <button onclick="dispatchJob('data_export', 'low', {format: 'csv', record_count: 5000, simulate_fail: false})" class="mt-3 w-full py-1.5 px-3 rounded-lg bg-[#161D2C] hover:bg-blue-600 hover:text-white text-slate-300 border border-[#232E47] hover:border-blue-500 font-mono text-xs font-semibold flex items-center justify-center gap-1.5 transition-all">
+            <i data-lucide="database" class="w-3.5 h-3.5"></i>
+            <span>Inject P2 Task</span>
+          </button>
+        </div>
+
+        <!-- 4. ML Inference -->
+        <div class="p-3.5 rounded-xl bg-[#0F1420] border border-[#1F2739] hover:border-purple-500/50 transition-all flex flex-col justify-between group">
+          <div>
+            <div class="flex items-center justify-between text-[10px] font-mono font-bold mb-1.5">
+              <span class="text-purple-400 bg-purple-500/10 px-1.5 py-0.2 rounded border border-purple-500/20">P0 NEURAL</span>
+              <span class="text-slate-500">~1000ms</span>
+            </div>
+            <div class="font-bold text-white text-xs font-mono">TASK_ML_INFERENCE</div>
+            <p class="text-[11px] text-slate-400 mt-1">Transformer sentiment forward pass & token scores.</p>
+          </div>
+          <button onclick="dispatchJob('ml_inference', 'high', {model: 'sentiment-xl', inputs: ['Nexus Queue demonstrates zero order latency.'], simulate_fail: false})" class="mt-3 w-full py-1.5 px-3 rounded-lg bg-[#161D2C] hover:bg-purple-600 hover:text-white text-slate-300 border border-[#232E47] hover:border-purple-500 font-mono text-xs font-semibold flex items-center justify-center gap-1.5 transition-all">
+            <i data-lucide="bot" class="w-3.5 h-3.5"></i>
+            <span>Inject Neural Task</span>
+          </button>
+        </div>
+
+        <!-- 5. Failure & DLQ Injection -->
+        <div class="p-3.5 rounded-xl bg-[#140D14] border border-rose-900/60 hover:border-rose-500 transition-all flex flex-col justify-between group">
+          <div>
+            <div class="flex items-center justify-between text-[10px] font-mono font-bold mb-1.5">
+              <span class="text-rose-400 bg-rose-500/10 px-1.5 py-0.2 rounded border border-rose-500/20">FAULT INJECTION</span>
+              <span class="text-rose-400">RETRY $\rightarrow$ DLQ</span>
+            </div>
+            <div class="font-bold text-rose-300 text-xs font-mono">TASK_INJECT_FAULT</div>
+            <p class="text-[11px] text-slate-400 mt-1">Simulates network drop, exponential backoff, then routes to DLQ.</p>
+          </div>
+          <button onclick="dispatchJob('webhook_delivery', 'medium', {url: 'https://gateway.internal/failing-endpoint', simulate_fail: true}, 1)" class="mt-3 w-full py-1.5 px-3 rounded-lg bg-rose-950/80 hover:bg-rose-600 hover:text-white text-rose-300 border border-rose-800 font-mono text-xs font-semibold flex items-center justify-center gap-1.5 transition-all">
+            <i data-lucide="shield-alert" class="w-3.5 h-3.5"></i>
+            <span>Simulate Failure</span>
+          </button>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- LIVE CLUSTER PIPELINE & EXECUTION STREAM -->
+    <section class="space-y-3">
+      <div class="flex items-center justify-between flex-wrap gap-3">
+        <div class="flex items-center gap-2">
+          <h2 class="text-sm font-extrabold text-white tracking-wide uppercase font-mono">Live Distributed Pipeline</h2>
+          <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-[#111622] text-cyan-400 border border-[#1F2739]">AUTO-SYNC 1.5s</span>
+        </div>
+
+        <div class="flex items-center gap-3 flex-wrap">
+          <!-- Real-Time Search Filter -->
+          <div class="relative">
+            <input 
+              id="search-filter" 
+              type="text" 
+              placeholder="Search by ID, type, or payload..." 
+              oninput="onSearchInput()"
+              class="w-64 pl-8 pr-3 py-1.5 bg-[#0F1420] border border-[#232E47] rounded-lg text-xs font-mono text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-colors"
+            />
+            <i data-lucide="search" class="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-2.5"></i>
+          </div>
+
+          <!-- Priority Filter Pills -->
+          <div class="flex items-center gap-1.5 text-xs font-mono">
+            <span class="text-slate-500 text-[11px]">PRIORITY:</span>
+            <button id="pill-filter-all" onclick="setFilter('all')" class="px-2 py-0.5 rounded bg-cyan-600 text-white font-bold text-[10px]">ALL</button>
+            <button id="pill-filter-high" onclick="setFilter('high')" class="px-2 py-0.5 rounded bg-[#161D2C] text-red-400 font-semibold text-[10px] hover:bg-[#1D263B]">P0 HIGH</button>
+            <button id="pill-filter-medium" onclick="setFilter('medium')" class="px-2 py-0.5 rounded bg-[#161D2C] text-amber-400 font-semibold text-[10px] hover:bg-[#1D263B]">P1 MED</button>
+            <button id="pill-filter-low" onclick="setFilter('low')" class="px-2 py-0.5 rounded bg-[#161D2C] text-blue-400 font-semibold text-[10px] hover:bg-[#1D263B]">P2 LOW</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4 STAGE PIPELINE LANES -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+
+        <!-- STAGE 1: QUEUED (BRPOP FIFO RING) -->
+        <div class="rounded-xl bg-[#0B0E14] border border-[#1F2739] flex flex-col min-h-[440px]">
+          <div class="p-3 border-b border-[#1A2234] flex items-center justify-between bg-[#0E131E] rounded-t-xl">
+            <div class="flex items-center gap-2 text-xs font-mono font-bold text-amber-400">
+              <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+              <span>1. QUEUE BACKLOG</span>
+            </div>
+            <span id="badge-lane-queued" class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-[#161D2C] text-amber-400 border border-amber-500/20">0</span>
+          </div>
+          <div id="lane-queued" class="p-3 space-y-2.5 flex-1 overflow-y-auto max-h-[580px]">
+            <div class="text-center py-14 text-slate-600 font-mono text-xs">Queue empty. Ready for task ingestion.</div>
+          </div>
+        </div>
+
+        <!-- STAGE 2: WORKER RUNNING (LEASE ACTIVE) -->
+        <div class="rounded-xl bg-[#0B0E14] border border-[#1F2739] flex flex-col min-h-[440px]">
+          <div class="p-3 border-b border-[#1A2234] flex items-center justify-between bg-[#0E131E] rounded-t-xl">
+            <div class="flex items-center gap-2 text-xs font-mono font-bold text-sky-400">
+              <span class="w-2 h-2 rounded-full bg-sky-400 animate-ping"></span>
+              <span>2. WORKER EXECUTING</span>
+            </div>
+            <span id="badge-lane-running" class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-[#161D2C] text-sky-400 border border-sky-500/20">0</span>
+          </div>
+          <div id="lane-running" class="p-3 space-y-2.5 flex-1 overflow-y-auto max-h-[580px]">
+            <div class="text-center py-14 text-slate-600 font-mono text-xs">Worker idle. Awaiting next dequeue.</div>
+          </div>
+        </div>
+
+        <!-- STAGE 3: COMMITTED (COMPLETED WITH AUDIT) -->
+        <div class="rounded-xl bg-[#0B0E14] border border-[#1F2739] flex flex-col min-h-[440px]">
+          <div class="p-3 border-b border-[#1A2234] flex items-center justify-between bg-[#0E131E] rounded-t-xl">
+            <div class="flex items-center gap-2 text-xs font-mono font-bold text-emerald-400">
+              <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+              <span>3. COMMITTED</span>
+            </div>
+            <span id="badge-lane-completed" class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-[#161D2C] text-emerald-400 border border-emerald-500/20">0</span>
+          </div>
+          <div id="lane-completed" class="p-3 space-y-2.5 flex-1 overflow-y-auto max-h-[580px]">
+            <div class="text-center py-14 text-slate-600 font-mono text-xs">No committed jobs yet.</div>
+          </div>
+        </div>
+
+        <!-- STAGE 4: DEAD-LETTER QUEUE (FATAL ISOLATION) -->
+        <div class="rounded-xl bg-[#0B0E14] border border-rose-950/80 flex flex-col min-h-[440px]">
+          <div class="p-3 border-b border-rose-950 flex items-center justify-between bg-[#120B10] rounded-t-xl">
+            <div class="flex items-center gap-2 text-xs font-mono font-bold text-rose-400">
+              <span class="w-2 h-2 rounded-full bg-rose-400"></span>
+              <span>4. DEAD-LETTER (DLQ)</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <button onclick="purgeDLQ()" class="text-[9px] font-mono uppercase px-1.5 py-0.5 bg-rose-950 text-rose-300 rounded border border-rose-800 hover:bg-rose-900 transition-colors">
+                Purge
+              </button>
+              <span id="badge-lane-dlq" class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-[#161D2C] text-rose-400 border border-rose-500/20">0</span>
+            </div>
+          </div>
+          <div id="lane-dlq" class="p-3 space-y-2.5 flex-1 overflow-y-auto max-h-[580px]">
+            <div class="text-center py-14 text-slate-600 font-mono text-xs">DLQ quarantined clean.</div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- MODAL: CUSTOM TASK INGESTION WORKBENCH -->
+  <div id="modal-custom-task" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden flex items-center justify-center p-4">
+    <div class="bg-[#0B0E14] border border-[#232E47] rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+      <div class="p-4 border-b border-[#1A2234] flex items-center justify-between bg-[#0E131E]">
+        <div class="flex items-center gap-3">
+          <div class="p-2 rounded-lg bg-cyan-500/10 border border-cyan-500/30 text-cyan-400">
+            <i data-lucide="terminal" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="font-extrabold text-white text-xs font-mono tracking-wide uppercase">Custom Task Ingestion Builder</h3>
+            <p class="text-xs text-slate-400">Dispatch bespoke payloads with custom priority and retries</p>
+          </div>
+        </div>
+        <button onclick="closeCustomTaskModal()" class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-[#1A2234] transition-colors">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="p-5 overflow-y-auto space-y-4 flex-1 text-xs font-mono">
+        <!-- Form Controls -->
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-[11px] text-slate-400 block mb-1">TASK / JOB TYPE</label>
+            <select id="custom-job-type" class="w-full p-2 bg-[#0F1420] border border-[#232E47] rounded-lg text-slate-200 focus:outline-none focus:border-cyan-500">
+              <option value="email_dispatch">email_dispatch</option>
+              <option value="data_export">data_export</option>
+              <option value="custom_calc">custom_calc</option>
+              <option value="ml_inference">ml_inference</option>
+              <option value="image_resize">image_resize</option>
+              <option value="webhook_delivery">webhook_delivery</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="text-[11px] text-slate-400 block mb-1">PRIORITY QUEUE</label>
+            <select id="custom-priority" class="w-full p-2 bg-[#0F1420] border border-[#232E47] rounded-lg text-slate-200 focus:outline-none focus:border-cyan-500">
+              <option value="high">P0 High Priority</option>
+              <option value="medium" selected>P1 Medium Priority</option>
+              <option value="low">P2 Low Priority</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-[11px] text-slate-400 block mb-1">MAX RETRIES</label>
+            <input id="custom-retries" type="number" min="0" max="10" value="3" class="w-full p-2 bg-[#0F1420] border border-[#232E47] rounded-lg text-slate-200 focus:outline-none focus:border-cyan-500" />
+          </div>
+          <div>
+            <label class="text-[11px] text-slate-400 block mb-1">TIMEOUT (SECONDS)</label>
+            <input id="custom-timeout" type="number" min="5" max="600" value="120" class="w-full p-2 bg-[#0F1420] border border-[#232E47] rounded-lg text-slate-200 focus:outline-none focus:border-cyan-500" />
+          </div>
+        </div>
+
+        <div>
+          <label class="text-[11px] text-slate-400 block mb-1">IDEMPOTENCY KEY (OPTIONAL)</label>
+          <div class="flex gap-2">
+            <input id="custom-idempotency" type="text" placeholder="e.g. ord_checkout_9821_payment" class="flex-1 p-2 bg-[#0F1420] border border-[#232E47] rounded-lg text-slate-200 focus:outline-none focus:border-cyan-500 text-xs" />
+            <button onclick="generateUUIDKey()" class="px-3 py-1.5 bg-[#161D2C] hover:bg-[#1D263B] text-slate-300 rounded-lg border border-[#232E47] text-xs">
+              UUID
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <label class="text-[11px] text-slate-400">JSON PAYLOAD</label>
+            <button onclick="formatCustomJSON()" class="text-[10px] text-cyan-400 hover:underline">Format JSON</button>
+          </div>
+          <textarea id="custom-payload-json" rows="6" class="w-full p-3 bg-[#07090E] border border-[#232E47] rounded-xl text-slate-200 text-xs font-mono focus:outline-none focus:border-cyan-500">{
+  "to": "dev@internal.io",
+  "subject": "Custom Queue Execution Test",
+  "simulate_fail": false
+}</textarea>
+        </div>
+      </div>
+
+      <div class="p-3 border-t border-[#1A2234] bg-[#0E131E] flex items-center justify-between">
+        <span id="custom-form-status" class="text-xs text-slate-500 font-mono">Ready to dispatch</span>
+        <div class="flex gap-2">
+          <button onclick="closeCustomTaskModal()" class="px-3 py-1.5 rounded-lg bg-[#161D2C] hover:bg-[#1D263B] text-slate-300 text-xs font-mono font-semibold">Cancel</button>
+          <button onclick="submitCustomTask()" class="px-4 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-mono font-bold flex items-center gap-1.5">
+            <i data-lucide="send" class="w-3.5 h-3.5"></i>
+            <span>Dispatch Task</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: WORKER CLUSTER MANAGEMENT -->
+  <div id="modal-workers" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden flex items-center justify-center p-4">
+    <div class="bg-[#0B0E14] border border-[#232E47] rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+      <div class="p-4 border-b border-[#1A2234] flex items-center justify-between bg-[#0E131E]">
+        <div class="flex items-center gap-3">
+          <div class="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
+            <i data-lucide="server" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="font-extrabold text-white text-xs font-mono tracking-wide uppercase">Worker Cluster Nodes</h3>
+            <p class="text-xs text-slate-400">Distributed process nodes leasing tasks from Redis priority queues</p>
+          </div>
+        </div>
+        <button onclick="closeWorkersModal()" class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-[#1A2234] transition-colors">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="p-5 overflow-y-auto space-y-4 flex-1 text-xs font-mono">
+        <div class="border border-[#1F2739] rounded-xl overflow-hidden">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-[#0E131E] text-slate-400 text-[10px] uppercase border-b border-[#1F2739]">
+              <tr>
+                <th class="p-3">Worker Node</th>
+                <th class="p-3">Host</th>
+                <th class="p-3">Status</th>
+                <th class="p-3">Current Job</th>
+                <th class="p-3">Jobs Completed / Failed</th>
+                <th class="p-3">Heartbeat</th>
+                <th class="p-3 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="worker-table-body" class="divide-y divide-[#1A2234]">
+              <tr>
+                <td colspan="7" class="p-6 text-center text-slate-500">Querying cluster nodes...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="p-3 border-t border-[#1A2234] bg-[#0E131E] flex items-center justify-between">
+        <span class="text-[11px] text-slate-500 font-mono">Heartbeats transmitted every 5 seconds</span>
+        <button onclick="closeWorkersModal()" class="px-4 py-1.5 rounded-lg bg-[#161D2C] hover:bg-[#1D263B] text-slate-200 text-xs font-mono font-semibold">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: ARCHITECTURE BLUEPRINT -->
+  <div id="modal-blueprint" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden flex items-center justify-center p-4">
+    <div class="bg-[#0B0E14] border border-[#232E47] rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+      <div class="p-5 border-b border-[#1A2234] flex items-center justify-between bg-[#0E131E]">
+        <div class="flex items-center gap-3">
+          <div class="p-2 rounded-lg bg-cyan-500/10 border border-cyan-500/30 text-cyan-400">
+            <i data-lucide="network" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="font-extrabold text-white text-sm font-mono tracking-wide uppercase">System Architecture Blueprint</h3>
+            <p class="text-xs text-slate-400">Distributed Execution Topology, Leases, and Reliability Semantics</p>
+          </div>
+        </div>
+        <button onclick="closeBlueprintModal()" class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-[#1A2234] transition-colors">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="p-6 overflow-y-auto space-y-6 flex-1 text-xs">
+        <!-- Flow Diagram Visual -->
+        <div class="p-5 rounded-xl bg-[#07090E] border border-[#1A2234] font-mono leading-relaxed overflow-x-auto text-slate-300">
+          <div class="text-cyan-400 font-bold mb-2">// HIGH-LEVEL COMPONENT INTERACTION PIPELINE</div>
+          <pre class="text-[11px] leading-snug">
+[ CLIENT / STOREFRONT (Port 5000) ] ──( HTTP POST )──> [ FASTAPI INGESTION GATEWAY (Port 8000) ]
+                                                                      │
+                                     ┌────────────────────────────────┴────────────────────────────────┐
+                                     ▼                                                                 ▼
+                          [ SQLITE / POSTGRES DB ]                                          [ REDIS PRIORITY RING ]
+                          - jobs, audit_logs                                                - queue:high (P0)
+                          - execution_history                                               - queue:medium (P1)
+                          - worker_nodes                                                    - queue:low (P2)
+                                     ▲                                                      - queue:delayed (ZSET)
+                                     │                                                                 │
+                                     │                                                                 ▼ (BRPOP P0->P1->P2)
+                                     │                                                      [ DISTRIBUTED WORKER ]
+                                     │                                                      - Acquires Lease (TTL=30s)
+                                     │                                                      - Heartbeat Keep-Alive
+                                     │                                                      - Task Execution Kernel
+                                     │                                                                 │
+                                     └────────────────────( COMMIT RESULT )────────────────────────────┘
+          </pre>
+        </div>
+
+        <!-- 3 Core Guarantees -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="p-4 rounded-xl bg-[#0E131E] border border-[#1F2739]">
+            <div class="font-bold font-mono text-cyan-400 mb-1 flex items-center gap-1.5">
+              <i data-lucide="shield-check" class="w-4 h-4"></i>
+              Idempotent Ingestion
+            </div>
+            <p class="text-slate-400 text-[11px] leading-relaxed">
+              Every job payload can carry a unique <code class="text-slate-200">idempotency_key</code>. Submitting the identical request multiple times safely returns the existing job record without re-enqueuing.
+            </p>
+          </div>
+
+          <div class="p-4 rounded-xl bg-[#0E131E] border border-[#1F2739]">
+            <div class="font-bold font-mono text-amber-400 mb-1 flex items-center gap-1.5">
+              <i data-lucide="key" class="w-4 h-4"></i>
+              Distributed Leases
+            </div>
+            <p class="text-slate-400 text-[11px] leading-relaxed">
+              When a worker dequeues a task, it sets an exclusive Redis key <code class="text-slate-200">job:lease:&lt;id&gt;</code> with a 30s TTL. If a worker container crashes mid-execution, the Reaper automatically detects lease expiry and reclaims the task.
+            </p>
+          </div>
+
+          <div class="p-4 rounded-xl bg-[#0E131E] border border-[#1F2739]">
+            <div class="font-bold font-mono text-rose-400 mb-1 flex items-center gap-1.5">
+              <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+              Exponential Backoff
+            </div>
+            <p class="text-slate-400 text-[11px] leading-relaxed">
+              Transient failures are scheduled into a sorted set with dynamic backoff delay: 
+              <code class="text-slate-200">Delay = base * 2^(retry-1) + jitter</code>. Once retries exceed bounds, tasks enter Dead-Letter Quarantine.
+            </p>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="p-4 border-t border-[#1A2234] bg-[#0E131E] flex justify-end">
+        <button onclick="closeBlueprintModal()" class="px-4 py-2 rounded-lg bg-[#161D2C] hover:bg-[#1D263B] text-slate-200 text-xs font-mono font-semibold">Dismiss</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: CONNECT REAL-WORLD APPS (SDK & API KEY) -->
+  <div id="modal-connect" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden flex items-center justify-center p-4">
+    <div class="bg-[#0B0E14] border border-[#232E47] rounded-2xl w-full max-w-3xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+      <div class="p-4 border-b border-[#1A2234] flex items-center justify-between bg-[#0E131E]">
+        <div class="flex items-center gap-3">
+          <div class="p-2 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400">
+            <i data-lucide="plug-zap" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="font-extrabold text-white text-xs font-mono tracking-wide uppercase">Connect Real-World Apps & Services</h3>
+            <p class="text-xs text-slate-400">Drop-in SDKs and REST Integration for Websites, Django, Next.js, and Mobile Backends</p>
+          </div>
+        </div>
+        <button onclick="closeConnectModal()" class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-[#1A2234] transition-colors">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="p-6 overflow-y-auto space-y-5 flex-1 text-xs font-mono">
+        <!-- API Key banner -->
+        <div class="p-3.5 rounded-xl bg-[#07090E] border border-amber-500/30 flex items-center justify-between">
+          <div>
+            <span class="text-[10px] uppercase text-amber-400 font-bold block">Permanent Production API Key</span>
+            <span class="text-white font-bold select-all">jq_live_enterprise_secret_key</span>
+          </div>
+          <span class="text-[10px] text-slate-400 font-sans">Pass via <code class="text-amber-300">X-API-Key</code> header</span>
+        </div>
+
+        <!-- Code Snippet: Python -->
+        <div>
+          <div class="flex items-center justify-between text-slate-300 mb-1.5 font-bold">
+            <span class="flex items-center gap-1.5 text-cyan-400">
+              <i data-lucide="code" class="w-4 h-4"></i> Option 1: Python (Django / Flask / FastAPI)
+            </span>
+            <span class="text-[10px] text-slate-500">sdk/python/jobqueue.py</span>
+          </div>
+          <pre class="p-3 bg-[#07090E] border border-[#1A2234] rounded-xl text-slate-300 overflow-x-auto text-[11px] leading-relaxed">
+from sdk.python.jobqueue import JobQueue
+
+# Initialize client
+queue = JobQueue(base_url="http://127.0.0.1:8000")
+
+# Dispatch background task asynchronously in ~20ms!
+job = queue.dispatch(
+    job_type="email_dispatch",
+    priority="high",
+    payload={"to": "customer@gmail.com", "subject": "Order #4092 Shipped!"}
+)
+print("Enqueued background job:", job["id"])</pre>
+        </div>
+
+        <!-- Code Snippet: Node.js / JavaScript -->
+        <div>
+          <div class="flex items-center justify-between text-slate-300 mb-1.5 font-bold">
+            <span class="flex items-center gap-1.5 text-amber-400">
+              <i data-lucide="code" class="w-4 h-4"></i> Option 2: Node.js / TypeScript (Express / Next.js)
+            </span>
+            <span class="text-[10px] text-slate-500">sdk/javascript/jobqueue.js</span>
+          </div>
+          <pre class="p-3 bg-[#07090E] border border-[#1A2234] rounded-xl text-slate-300 overflow-x-auto text-[11px] leading-relaxed">
+const { JobQueue } = require('./sdk/javascript/jobqueue');
+
+const queue = new JobQueue({ baseUrl: 'http://127.0.0.1:8000' });
+
+await queue.dispatch('email_dispatch', {
+  to: 'customer@gmail.com',
+  subject: 'Order #4092 Shipped!'
+}, { priority: 'high' });</pre>
+        </div>
+
+        <!-- Code Snippet: cURL -->
+        <div>
+          <div class="flex items-center justify-between text-slate-300 mb-1.5 font-bold">
+            <span class="flex items-center gap-1.5 text-emerald-400">
+              <i data-lucide="terminal" class="w-4 h-4"></i> Option 3: cURL (Any Language / Webhook)
+            </span>
+          </div>
+          <pre class="p-3 bg-[#07090E] border border-[#1A2234] rounded-xl text-slate-300 overflow-x-auto text-[11px] leading-relaxed">
+curl -X POST http://127.0.0.1:8000/api/jobs/ \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: jq_live_enterprise_secret_key" \
+  -d '{"job_type": "email_dispatch", "priority": "high", "payload": {"to": "buyer@trendcart.com"}}'</pre>
+        </div>
+      </div>
+
+      <div class="p-3 border-t border-[#1A2234] bg-[#0E131E] flex justify-end">
+        <button onclick="closeConnectModal()" class="px-4 py-1.5 rounded-lg bg-[#161D2C] hover:bg-[#1D263B] text-slate-200 text-xs font-mono font-semibold">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: ADVANCED JOB INSPECTOR & LOG DRAWER -->
+  <div id="modal-inspector" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden flex items-center justify-center p-4">
+    <div class="bg-[#0B0E14] border border-[#232E47] rounded-2xl w-full max-w-3xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+      
+      <!-- Drawer Header -->
+      <div class="p-4 border-b border-[#1A2234] flex items-center justify-between bg-[#0E131E]">
+        <div class="flex items-center gap-3">
+          <div class="p-2 rounded-lg bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 font-mono text-xs font-bold">
+            TRACE
+          </div>
+          <div>
+            <h3 id="inspect-title" class="font-bold text-white text-xs font-mono tracking-wide uppercase">TASK_INSPECT</h3>
+            <div class="flex items-center gap-2">
+              <p id="inspect-id" class="text-[11px] text-slate-400 font-mono">UUID: -</p>
+              <button onclick="copyJobId()" class="text-[10px] text-cyan-400 hover:underline">Copy</button>
+            </div>
+          </div>
+        </div>
+        <button onclick="closeInspector()" class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-[#1A2234] transition-colors">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <!-- Drawer Body -->
+      <div class="p-5 overflow-y-auto space-y-4 flex-1 text-xs">
+        <!-- Metadata Stats -->
+        <div class="grid grid-cols-4 gap-2.5 font-mono">
+          <div class="p-2.5 rounded-lg bg-[#07090E] border border-[#1A2234]">
+            <span class="text-[10px] text-slate-500 block">STATE</span>
+            <span id="inspect-status" class="font-bold text-white">-</span>
+          </div>
+          <div class="p-2.5 rounded-lg bg-[#07090E] border border-[#1A2234]">
+            <span class="text-[10px] text-slate-500 block">PRIORITY</span>
+            <span id="inspect-priority" class="font-bold text-white">-</span>
+          </div>
+          <div class="p-2.5 rounded-lg bg-[#07090E] border border-[#1A2234]">
+            <span class="text-[10px] text-slate-500 block">WORKER LEASE</span>
+            <span id="inspect-worker" class="font-bold text-slate-300 truncate block">-</span>
+          </div>
+          <div class="p-2.5 rounded-lg bg-[#07090E] border border-[#1A2234]">
+            <span class="text-[10px] text-slate-500 block">RETRY ATTEMPTS</span>
+            <span id="inspect-retries" class="font-bold text-slate-300 block">-</span>
+          </div>
+        </div>
+
+        <!-- Input Payload -->
+        <div>
+          <span class="text-[11px] font-mono text-slate-400 font-semibold mb-1 block">INPUT PAYLOAD</span>
+          <pre id="inspect-payload" class="p-3 bg-[#07090E] border border-[#1A2234] rounded-xl font-mono text-xs text-amber-300 overflow-x-auto max-h-32">// Empty</pre>
+        </div>
+
+        <!-- Result / Output -->
+        <div>
+          <span class="text-[11px] font-mono text-slate-400 font-semibold mb-1 block">RETURN PAYLOAD / RESULT</span>
+          <pre id="inspect-result" class="p-3 bg-[#07090E] border border-[#1A2234] rounded-xl font-mono text-xs text-cyan-300 overflow-x-auto max-h-36">// Empty</pre>
+        </div>
+
+        <!-- Terminal Logs -->
+        <div>
+          <span class="text-[11px] font-mono text-slate-400 font-semibold mb-1 block">WORKER EXECUTION LOG DUMP</span>
+          <pre id="inspect-logs" class="p-3 bg-[#07090E] border border-[#1A2234] rounded-xl font-mono text-xs text-slate-300 overflow-x-auto max-h-52 whitespace-pre-wrap leading-relaxed">// Empty</pre>
+        </div>
+      </div>
+
+      <!-- Drawer Footer Actions -->
+      <div class="p-3 border-t border-[#1A2234] bg-[#0E131E] flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <button id="inspect-btn-cancel" onclick="cancelInspectedTask()" class="hidden px-3 py-1.5 rounded-lg bg-rose-950 hover:bg-rose-900 border border-rose-800 text-rose-300 text-xs font-mono font-bold">
+            Cancel Task
+          </button>
+          <button id="inspect-btn-retry" onclick="retryInspectedTask()" class="hidden px-3 py-1.5 rounded-lg bg-cyan-950 hover:bg-cyan-900 border border-cyan-500/40 text-cyan-300 text-xs font-mono font-bold">
+            Retry Task
+          </button>
+        </div>
+        <button onclick="closeInspector()" class="px-4 py-1.5 rounded-lg bg-[#161D2C] hover:bg-[#1D263B] text-slate-200 text-xs font-mono font-semibold">Dismiss</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- CLIENT LOGIC & REAL-TIME WEBSOCKET/POLL CONTROLLER -->
+  <script>
+    const API_KEY = 'jq_live_enterprise_secret_key';
+    let authToken = null;
+    let clusterJobs = [];
+    let activeFilter = 'all';
+    let currentSearchTerm = '';
+    let currentInspectedJobId = null;
+    let throughputHistory = [8, 12, 14, 19, 16, 24, 21, 28, 25, 32, 29, 36, 42, 38, 45];
+
+    function getAuthHeaders() {
+      const h = {
+        'Content-Type': 'application/json',
+        'X-API-Key': API_KEY
+      };
+      if (authToken) {
+        h['Authorization'] = `Bearer ${authToken}`;
+      }
+      return h;
+    }
+
+    lucide.createIcons();
+
+    // Authenticate with backend
+    async function initSession() {
+      // Start cluster polling immediately with API Key
+      fetchClusterState();
+      setInterval(fetchClusterState, 1500); // 1.5s live polling
+      setInterval(drawSparkline, 1000);     // 1.0s sparkline animation
+
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({email: 'admin@jobqueue.io', password: 'Admin@123456'})
+        });
+        if (res.ok) {
+          const auth = await res.json();
+          authToken = auth.access_token;
+        }
+      } catch (err) {
+        console.error('Session init error:', err);
+      }
+    }
+
+    // Dispatch job preset
+    async function dispatchJob(jobType, priority, payload, maxRetries = 3) {
+      showToast(`Ingesting ${jobType} (${priority.toUpperCase()})...`);
+      try {
+        const res = await fetch('/api/jobs/', {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({
+            job_type: jobType,
+            priority: priority,
+            payload: payload,
+            max_retries: maxRetries
+          })
+        });
+        if (res.ok) {
+          showToast(`Enqueued: ${jobType}`);
+          throughputHistory.push(Math.floor(Math.random() * 8) + 25);
+          if (throughputHistory.length > 25) throughputHistory.shift();
+          fetchClusterState();
+        } else {
+          const err = await res.json();
+          showToast(`Ingest Error: ${err.detail || 'Failed'}`);
+        }
+      } catch (e) {
+        showToast('Ingest Failed');
+      }
+    }
+
+    // Burst Load Testing Simulation
+    async function triggerBurstLoad() {
+      showToast('Firing burst load (+10 concurrent tasks)...');
+      const types = ['custom_calc', 'email_dispatch', 'data_export', 'ml_inference'];
+      const priorities = ['high', 'medium', 'low'];
+      
+      const promises = Array.from({length: 10}).map((_, i) => {
+        const t = types[i % types.length];
+        const p = priorities[i % priorities.length];
+        return fetch('/api/jobs/', {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({
+            job_type: t,
+            priority: p,
+            payload: { burst_id: i, n: 20, simulate_fail: false },
+            max_retries: 2
+          })
+        });
+      });
+
+      await Promise.all(promises);
+      showToast('Burst Ingested! Workers executing...');
+      fetchClusterState();
+    }
+
+    // Fetch Cluster State
+    async function fetchClusterState() {
+      try {
+        const [jobsRes, statsRes, workersRes] = await Promise.all([
+          fetch('/api/admin/jobs?limit=50', { headers: getAuthHeaders() }),
+          fetch('/api/admin/stats', { headers: getAuthHeaders() }),
+          fetch('/api/workers/', { headers: getAuthHeaders() })
+        ]);
+
+        if (jobsRes.ok) {
+          clusterJobs = await jobsRes.json();
+          renderLanes();
+        }
+
+        if (statsRes.ok) {
+          const stats = await statsRes.json();
+          document.getElementById('metric-queued').innerText = stats.queue_stats.total_in_queue;
+          document.getElementById('metric-completed').innerText = stats.job_stats.completed;
+          document.getElementById('metric-dlq').innerText = stats.queue_stats.dead_letter_queue;
+
+          document.getElementById('pill-p0').innerText = stats.queue_stats.high_priority_queue;
+          document.getElementById('pill-p1').innerText = stats.queue_stats.medium_priority_queue;
+          document.getElementById('pill-p2').innerText = stats.queue_stats.low_priority_queue;
+        }
+
+        if (workersRes.ok) {
+          const workers = await workersRes.json();
+          const onlineWorkers = workers.filter(w => w.status === 'ONLINE');
+          document.getElementById('metric-workers').innerText = onlineWorkers.length;
+          document.getElementById('header-worker-count').innerText = `${onlineWorkers.length} ONLINE`;
+          renderWorkersTable(workers);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    // Search filter input handler
+    function onSearchInput() {
+      currentSearchTerm = document.getElementById('search-filter').value.toLowerCase().trim();
+      renderLanes();
+    }
+
+    // Render 4-Lane Matrix
+    function renderLanes() {
+      let filtered = clusterJobs;
+
+      // Filter by priority
+      if (activeFilter !== 'all') {
+        filtered = filtered.filter(j => j.priority === activeFilter);
+      }
+
+      // Filter by search query
+      if (currentSearchTerm) {
+        filtered = filtered.filter(j => {
+          const idMatch = j.id && j.id.toLowerCase().includes(currentSearchTerm);
+          const typeMatch = j.job_type && j.job_type.toLowerCase().includes(currentSearchTerm);
+          const payloadMatch = j.payload && JSON.stringify(j.payload).toLowerCase().includes(currentSearchTerm);
+          return idMatch || typeMatch || payloadMatch;
+        });
+      }
+
+      const queued = filtered.filter(j => j.status === 'QUEUED' || j.status === 'SUBMITTED' || j.status === 'RETRY_WAIT');
+      const running = filtered.filter(j => j.status === 'RUNNING');
+      const completed = filtered.filter(j => j.status === 'COMPLETED');
+      const dlq = filtered.filter(j => j.status === 'DEAD_LETTER' || j.status === 'CANCELLED');
+
+      document.getElementById('badge-lane-queued').innerText = queued.length;
+      document.getElementById('badge-lane-running').innerText = running.length;
+      document.getElementById('badge-lane-completed').innerText = completed.length;
+      document.getElementById('badge-lane-dlq').innerText = dlq.length;
+
+      populateLane('lane-queued', queued, 'amber', false, false, true);
+      populateLane('lane-running', running, 'sky', true, false, true);
+      populateLane('lane-completed', completed, 'emerald');
+      populateLane('lane-dlq', dlq, 'rose', false, true);
+    }
+
+    function populateLane(elementId, items, color, isLeased = false, isDLQ = false, canCancel = false) {
+      const el = document.getElementById(elementId);
+      if (items.length === 0) {
+        el.innerHTML = `<div class="text-center py-14 text-slate-600 font-mono text-xs">No tasks in stage.</div>`;
+        return;
+      }
+
+      el.innerHTML = items.map(j => {
+        const pRibbon = j.priority === 'high'
+          ? '<span class="text-red-400 bg-red-500/10 border border-red-500/30 px-1 py-0.2 rounded text-[9px] font-bold font-mono">P0 HIGH</span>'
+          : j.priority === 'medium'
+          ? '<span class="text-amber-400 bg-amber-500/10 border border-amber-500/30 px-1 py-0.2 rounded text-[9px] font-bold font-mono">P1 MED</span>'
+          : '<span class="text-blue-400 bg-blue-500/10 border border-blue-500/30 px-1 py-0.2 rounded text-[9px] font-bold font-mono">P2 LOW</span>';
+
+        return `
+          <div onclick="inspectTask('${j.id}')" class="p-3 rounded-lg bg-[#0F1420] border border-[#1A2234] hover:border-slate-600 cursor-pointer transition-all hover:bg-[#141B2B] ${isLeased ? 'border-sky-500/50 glow-cyan' : ''}">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-xs font-mono font-bold text-white tracking-tight">${j.job_type}</span>
+              ${pRibbon}
+            </div>
+            <div class="flex items-center justify-between text-[10px] font-mono text-slate-400">
+              <span class="text-slate-500">${j.id.substring(0, 8)}</span>
+              <span>${new Date(j.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'})}</span>
+            </div>
+            ${isLeased ? `
+              <div class="mt-2 text-[10px] font-mono text-sky-400 flex items-center justify-between">
+                <span>WORKER: ${j.worker_id ? j.worker_id.substring(0, 18) : 'worker-pool'}</span>
+                <span class="w-1.5 h-1.5 rounded-full bg-sky-400 animate-ping"></span>
+              </div>
+            ` : ''}
+            ${canCancel ? `
+              <div class="mt-2 pt-2 border-t border-[#1F2739] flex items-center justify-between">
+                <span class="text-[10px] font-mono text-slate-500">Attempt: ${j.retry_count || 0}/${j.max_retries}</span>
+                <button onclick="event.stopPropagation(); cancelTaskAction('${j.id}')" class="px-2 py-0.5 rounded bg-rose-950/60 hover:bg-rose-900 border border-rose-800 text-rose-300 text-[10px] font-mono">
+                  ✕ Cancel
+                </button>
+              </div>
+            ` : ''}
+            ${isDLQ ? `
+              <div class="mt-2 pt-2 border-t border-rose-950 flex items-center justify-between">
+                <span class="text-[10px] font-mono text-rose-400 truncate max-w-[140px]">${j.error_message || 'Retries Exceeded'}</span>
+                <button onclick="event.stopPropagation(); requeueDLQ('${j.id}')" class="px-2 py-0.5 rounded bg-cyan-950 hover:bg-cyan-900 border border-cyan-500/40 text-cyan-300 text-[10px] font-mono font-bold">
+                  ↺ REDRIVE
+                </button>
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Cancel Job
+    async function cancelTaskAction(jobId) {
+      showToast(`Cancelling task ${jobId.substring(0, 8)}...`);
+      try {
+        const res = await fetch(`/api/jobs/${jobId}/cancel`, {
+          method: 'POST',
+          headers: getAuthHeaders()
+        });
+        if (res.ok) {
+          showToast(`Task ${jobId.substring(0, 8)} Cancelled`);
+          fetchClusterState();
+        } else {
+          const err = await res.json();
+          showToast(`Cancel failed: ${err.detail || 'Error'}`);
+        }
+      } catch (e) {
+        showToast('Cancel failed');
+      }
+    }
+
+    // Retry Job
+    async function retryTaskAction(jobId) {
+      showToast(`Retrying task ${jobId.substring(0, 8)}...`);
+      try {
+        const res = await fetch(`/api/jobs/${jobId}/retry`, {
+          method: 'POST',
+          headers: getAuthHeaders()
+        });
+        if (res.ok) {
+          showToast(`Task ${jobId.substring(0, 8)} Re-enqueued!`);
+          fetchClusterState();
+        } else {
+          const err = await res.json();
+          showToast(`Retry failed: ${err.detail || 'Error'}`);
+        }
+      } catch (e) {
+        showToast('Retry failed');
+      }
+    }
+
+    // DLQ Redrive
+    async function requeueDLQ(jobId) {
+      showToast(`Redriving DLQ task ${jobId.substring(0, 8)}...`);
+      try {
+        const res = await fetch(`/api/admin/dlq/${jobId}/retry`, {
+          method: 'POST',
+          headers: getAuthHeaders()
+        });
+        if (res.ok) {
+          showToast(`DLQ Task Redriven!`);
+          fetchClusterState();
+        }
+      } catch (e) {
+        showToast('Redrive failed');
+      }
+    }
+
+    // DLQ Purge All
+    async function purgeDLQ() {
+      if (!confirm("Are you sure you want to purge all items in the Dead-Letter Queue?")) return;
+      showToast('Purging Dead-Letter Queue...');
+      try {
+        const res = await fetch('/api/admin/dlq/purge', {
+          method: 'POST',
+          headers: getAuthHeaders()
+        });
+        if (res.ok) {
+          const data = await res.json();
+          showToast(data.message || 'DLQ Purged');
+          fetchClusterState();
+        }
+      } catch (e) {
+        showToast('Purge failed');
+      }
+    }
+
+    // Inspect Job
+    async function inspectTask(jobId) {
+      currentInspectedJobId = jobId;
+      try {
+        const res = await fetch(`/api/jobs/${jobId}`, {
+          headers: getAuthHeaders()
+        });
+        if (!res.ok) return;
+        const job = await res.json();
+
+        document.getElementById('inspect-id').innerText = `UUID: ${job.id}`;
+        document.getElementById('inspect-title').innerText = `TASK: ${job.job_type}`;
+        document.getElementById('inspect-status').innerText = job.status;
+        document.getElementById('inspect-priority').innerText = job.priority.toUpperCase();
+        document.getElementById('inspect-worker').innerText = job.worker_id || 'NONE';
+        document.getElementById('inspect-retries').innerText = `${job.retry_count} / ${job.max_retries}`;
+
+        document.getElementById('inspect-payload').innerText = job.payload ? JSON.stringify(job.payload, null, 2) : '// No input payload';
+        document.getElementById('inspect-result').innerText = job.result ? JSON.stringify(job.result, null, 2) : '// No committed output payload yet';
+        document.getElementById('inspect-logs').innerText = job.logs || '// No execution console logs recorded';
+
+        // Action button visibility
+        const btnCancel = document.getElementById('inspect-btn-cancel');
+        const btnRetry = document.getElementById('inspect-btn-retry');
+
+        if (job.status === 'QUEUED' || job.status === 'RUNNING' || job.status === 'RETRY_WAIT') {
+          btnCancel.classList.remove('hidden');
+          btnRetry.classList.add('hidden');
+        } else if (job.status === 'DEAD_LETTER' || job.status === 'CANCELLED') {
+          btnCancel.classList.add('hidden');
+          btnRetry.classList.remove('hidden');
+        } else {
+          btnCancel.classList.add('hidden');
+          btnRetry.classList.add('hidden');
+        }
+
+        document.getElementById('modal-inspector').classList.remove('hidden');
+        lucide.createIcons();
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    function cancelInspectedTask() {
+      if (!currentInspectedJobId) return;
+      cancelTaskAction(currentInspectedJobId);
+      closeInspector();
+    }
+
+    function retryInspectedTask() {
+      if (!currentInspectedJobId) return;
+      retryTaskAction(currentInspectedJobId);
+      closeInspector();
+    }
+
+    function copyJobId() {
+      if (!currentInspectedJobId) return;
+      navigator.clipboard.writeText(currentInspectedJobId);
+      showToast('Copied Job UUID to clipboard');
+    }
+
+    function closeInspector() {
+      document.getElementById('modal-inspector').classList.add('hidden');
+      currentInspectedJobId = null;
+    }
+
+    // Workers Table
+    function renderWorkersTable(workers) {
+      const tbody = document.getElementById('worker-table-body');
+      if (!tbody) return;
+      if (workers.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-500">No worker nodes registered.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = workers.map(w => {
+        const isOnline = w.status === 'ONLINE';
+        const isDraining = w.status === 'DRAINING';
+        const statusBadge = isOnline 
+          ? `<span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold">ONLINE</span>`
+          : isDraining
+          ? `<span class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-bold">DRAINING</span>`
+          : `<span class="px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700 text-[10px] font-bold">OFFLINE</span>`;
+
+        const lastHb = w.last_heartbeat ? new Date(w.last_heartbeat).toLocaleTimeString() : 'N/A';
+
+        return `
+          <tr class="hover:bg-[#141B2B]">
+            <td class="p-3 font-bold text-white">${w.worker_id}</td>
+            <td class="p-3 text-slate-400">${w.hostname || 'localhost'}</td>
+            <td class="p-3">${statusBadge}</td>
+            <td class="p-3 text-sky-400">${w.current_job_id ? w.current_job_id.substring(0, 8) : 'idle'}</td>
+            <td class="p-3 text-slate-300">${w.jobs_completed} / <span class="text-rose-400">${w.jobs_failed}</span></td>
+            <td class="p-3 text-slate-500">${lastHb}</td>
+            <td class="p-3 text-right">
+              ${isOnline ? `
+                <button onclick="drainWorkerNode('${w.worker_id}')" class="px-2.5 py-1 bg-amber-950/80 hover:bg-amber-900 border border-amber-700 text-amber-300 rounded text-[10px] font-semibold">
+                  Drain
+                </button>
+              ` : `
+                <button onclick="activateWorkerNode('${w.worker_id}')" class="px-2.5 py-1 bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-700 text-emerald-300 rounded text-[10px] font-semibold">
+                  Activate
+                </button>
+              `}
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    async function drainWorkerNode(workerId) {
+      showToast(`Setting worker ${workerId} to DRAINING...`);
+      await fetch(`/api/workers/${workerId}/drain`, {
+        method: 'POST',
+        headers: getAuthHeaders()
+      });
+      fetchClusterState();
+    }
+
+    async function activateWorkerNode(workerId) {
+      showToast(`Activating worker ${workerId}...`);
+      await fetch(`/api/workers/${workerId}/activate`, {
+        method: 'POST',
+        headers: getAuthHeaders()
+      });
+      fetchClusterState();
+    }
+
+    // Custom Task Builder
+    function openCustomTaskModal() {
+      document.getElementById('modal-custom-task').classList.remove('hidden');
+    }
+    function closeCustomTaskModal() {
+      document.getElementById('modal-custom-task').classList.add('hidden');
+    }
+
+    function generateUUIDKey() {
+      const uuid = 'key_' + Math.random().toString(36).substring(2, 10) + '_' + Date.now();
+      document.getElementById('custom-idempotency').value = uuid;
+    }
+
+    function formatCustomJSON() {
+      const textarea = document.getElementById('custom-payload-json');
+      try {
+        const parsed = JSON.parse(textarea.value);
+        textarea.value = JSON.stringify(parsed, null, 2);
+      } catch (e) {
+        alert('Invalid JSON syntax: ' + e.message);
+      }
+    }
+
+    async function submitCustomTask() {
+      const jobType = document.getElementById('custom-job-type').value;
+      const priority = document.getElementById('custom-priority').value;
+      const maxRetries = parseInt(document.getElementById('custom-retries').value) || 3;
+      const timeoutSec = parseInt(document.getElementById('custom-timeout').value) || 120;
+      const idempotencyKey = document.getElementById('custom-idempotency').value.trim() || null;
+      const jsonStr = document.getElementById('custom-payload-json').value;
+
+      let payload = {};
+      try {
+        payload = JSON.parse(jsonStr);
+      } catch (e) {
+        alert('Invalid JSON payload: ' + e.message);
+        return;
+      }
+
+      document.getElementById('custom-form-status').innerText = 'Submitting...';
+
+      try {
+        const res = await fetch('/api/jobs/', {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({
+            job_type: jobType,
+            priority: priority,
+            payload: payload,
+            idempotency_key: idempotencyKey,
+            max_retries: maxRetries,
+            run_timeout_seconds: timeoutSec
+          })
+        });
+
+        if (res.ok) {
+          const job = await res.json();
+          showToast(`Custom Task Enqueued (#${job.id.substring(0, 8)})`);
+          closeCustomTaskModal();
+          fetchClusterState();
+        } else {
+          const err = await res.json();
+          alert('Failed to dispatch task: ' + (err.detail || JSON.stringify(err)));
+          document.getElementById('custom-form-status').innerText = 'Error occurred';
+        }
+      } catch (err) {
+        alert('Dispatch error: ' + err.message);
+      }
+    }
+
+    function openWorkersModal() {
+      document.getElementById('modal-workers').classList.remove('hidden');
+      fetchClusterState();
+    }
+    function closeWorkersModal() {
+      document.getElementById('modal-workers').classList.add('hidden');
+    }
+
+    function openBlueprintModal() {
+      document.getElementById('modal-blueprint').classList.remove('hidden');
+    }
+    function closeBlueprintModal() {
+      document.getElementById('modal-blueprint').classList.add('hidden');
+    }
+
+    function openConnectModal() {
+      document.getElementById('modal-connect').classList.remove('hidden');
+    }
+    function closeConnectModal() {
+      document.getElementById('modal-connect').classList.add('hidden');
+    }
+
+    // Real-world Live Traffic Autopilot Simulator
+    let isAutopilotRunning = false;
+    let autopilotInterval = null;
+
+    const SIMULATED_CUSTOMER_EVENTS = [
+      { action: "Customer checkout: Order #49281 on Storefront", type: "email_dispatch", priority: "high", payload: { to: "buyer_49281@trendcart.io", subject: "Order #49281 Receipt" } },
+      { action: "User avatar uploaded: profile_photo_902.jpg", type: "image_resize", priority: "medium", payload: { image_url: "https://cdn.example.com/photo.jpg" } },
+      { action: "Periodic hourly revenue aggregation batch", type: "data_export", priority: "low", payload: { format: "csv", record_count: 2500 } },
+      { action: "Customer review submitted: 5 Stars", type: "ml_inference", priority: "high", payload: { model: "sentiment-v2", inputs: ["Fast delivery and high quality product!"] } },
+      { action: "Shipping label generator dispatched", type: "email_dispatch", priority: "high", payload: { to: "shipping_dept@warehouse.io", subject: "Pick & Pack Sheet" } }
+    ];
+    let eventIndex = 0;
+
+    function toggleAutopilot() {
+      isAutopilotRunning = !isAutopilotRunning;
+      const btn = document.getElementById('btn-autopilot');
+      const dot = document.getElementById('dot-autopilot');
+      const txt = document.getElementById('text-autopilot');
+      const banner = document.getElementById('autopilot-banner');
+
+      if (isAutopilotRunning) {
+        btn.className = "px-3 py-1.5 rounded-lg bg-emerald-950/60 text-emerald-300 border border-emerald-500/50 text-xs font-mono font-semibold flex items-center gap-2 transition-all glow-emerald";
+        dot.className = "w-2 h-2 rounded-full bg-emerald-400 animate-ping";
+        txt.innerText = "AUTOPILOT: STREAMING";
+        banner.classList.remove('hidden');
+
+        // Immediately fire first
+        const firstEvt = SIMULATED_CUSTOMER_EVENTS[0];
+        document.getElementById('autopilot-event-log').innerText = `${new Date().toLocaleTimeString()} — ${firstEvt.action}`;
+        dispatchJob(firstEvt.type, firstEvt.priority, firstEvt.payload);
+
+        autopilotInterval = setInterval(() => {
+          eventIndex++;
+          const evt = SIMULATED_CUSTOMER_EVENTS[eventIndex % SIMULATED_CUSTOMER_EVENTS.length];
+          document.getElementById('autopilot-event-log').innerText = `${new Date().toLocaleTimeString()} — ${evt.action}`;
+          dispatchJob(evt.type, evt.priority, evt.payload);
+        }, 2800);
+      } else {
+        btn.className = "px-3 py-1.5 rounded-lg bg-[#111622] hover:bg-[#1A2234] text-slate-300 border border-[#232E47] text-xs font-mono font-semibold flex items-center gap-2 transition-all";
+        dot.className = "w-2 h-2 rounded-full bg-slate-500";
+        txt.innerText = "AUTOPILOT: OFF";
+        banner.classList.add('hidden');
+        clearInterval(autopilotInterval);
+      }
+    }
+
+    function setFilter(priority) {
+      activeFilter = priority;
+      
+      const pills = ['all', 'high', 'medium', 'low'];
+      pills.forEach(p => {
+        const btn = document.getElementById(`pill-filter-${p}`);
+        if (p === priority) {
+          btn.className = 'px-2 py-0.5 rounded bg-cyan-600 text-white font-bold text-[10px]';
+        } else {
+          btn.className = 'px-2 py-0.5 rounded bg-[#161D2C] text-slate-400 font-semibold text-[10px] hover:bg-[#1D263B]';
+        }
+      });
+
+      renderLanes();
+    }
+
+    function showToast(msg) {
+      const el = document.getElementById('toast-status');
+      const txt = document.getElementById('toast-text');
+      txt.innerText = msg;
+      el.classList.remove('hidden');
+      setTimeout(() => el.classList.add('hidden'), 2500);
+    }
+
+    // Sparkline Canvas Rendering
+    function drawSparkline() {
+      const canvas = document.getElementById('sparklineCanvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const w = canvas.width;
+      const h = canvas.height;
+
+      ctx.clearRect(0, 0, w, h);
+
+      // Random variation
+      throughputHistory.push(Math.max(6, Math.floor(Math.random() * 12) + 14));
+      if (throughputHistory.length > 25) throughputHistory.shift();
+
+      const maxVal = Math.max(...throughputHistory, 45);
+      const step = w / (throughputHistory.length - 1);
+
+      ctx.beginPath();
+      ctx.strokeStyle = '#00F0FF';
+      ctx.lineWidth = 1.8;
+
+      throughputHistory.forEach((val, i) => {
+        const x = i * step;
+        const y = h - (val / maxVal) * (h - 6) - 3;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+
+      // Gradient Fill
+      ctx.lineTo(w, h);
+      ctx.lineTo(0, h);
+      ctx.closePath();
+      const grad = ctx.createLinearGradient(0, 0, 0, h);
+      grad.addColorStop(0, 'rgba(0, 240, 255, 0.20)');
+      grad.addColorStop(1, 'rgba(0, 240, 255, 0.0)');
+      ctx.fillStyle = grad;
+      ctx.fill();
+
+      document.getElementById('metric-ops').innerText = `${throughputHistory[throughputHistory.length - 1]} ops/s`;
+    }
+
+    // Initialize
+    initSession();
+  </script>
+</body>
+</html>

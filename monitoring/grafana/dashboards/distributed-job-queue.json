@@ -1,0 +1,96 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": true,
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 0 },
+      "id": 1,
+      "title": "Active Worker Nodes",
+      "type": "stat",
+      "targets": [{ "expr": "active_workers_count", "legendFormat": "Workers" }],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": { "calcs": ["lastNotNull"], "values": false }
+      }
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 6, "w": 6, "x": 6, "y": 0 },
+      "id": 2,
+      "title": "High Priority Backlog",
+      "type": "stat",
+      "targets": [{ "expr": "queue_size{priority=\"high\"}", "legendFormat": "High Priority" }],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": { "calcs": ["lastNotNull"], "values": false }
+      }
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 6, "w": 6, "x": 12, "y": 0 },
+      "id": 3,
+      "title": "Dead Letter Queue Backlog",
+      "type": "stat",
+      "targets": [{ "expr": "queue_size{priority=\"dead_letter\"}", "legendFormat": "DLQ" }],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": { "calcs": ["lastNotNull"], "values": false }
+      }
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 6, "w": 6, "x": 18, "y": 0 },
+      "id": 4,
+      "title": "Job Submission Rate (req/s)",
+      "type": "stat",
+      "targets": [{ "expr": "sum(rate(job_submissions_total[1m]))", "legendFormat": "Submissions/s" }],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": { "calcs": ["lastNotNull"], "values": false }
+      }
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 6 },
+      "id": 5,
+      "title": "Queue Lengths by Priority",
+      "type": "timeseries",
+      "targets": [
+        { "expr": "queue_size{priority=\"high\"}", "legendFormat": "High Priority" },
+        { "expr": "queue_size{priority=\"medium\"}", "legendFormat": "Medium Priority" },
+        { "expr": "queue_size{priority=\"low\"}", "legendFormat": "Low Priority" },
+        { "expr": "queue_size{priority=\"delayed\"}", "legendFormat": "Delayed (Retry Wait)" },
+        { "expr": "queue_size{priority=\"dead_letter\"}", "legendFormat": "Dead Letter Queue" }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 6 },
+      "id": 6,
+      "title": "Execution Throughput & Outcomes",
+      "type": "timeseries",
+      "targets": [
+        { "expr": "sum by (status) (rate(job_executions_total[1m]))", "legendFormat": "Status: {{status}}" }
+      ]
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["distributed-job-queue", "production"],
+  "time": { "from": "now-15m", "to": "now" },
+  "timepicker": { "refresh_intervals": ["5s", "10s", "30s", "1m"] },
+  "timezone": "browser",
+  "title": "Distributed Job Queue Observability",
+  "version": 1
+}
